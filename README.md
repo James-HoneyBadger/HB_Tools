@@ -37,9 +37,16 @@ HB Tools provides a desktop application with tools similar to Oracle's PeopleToo
 
 ## Features
 
+- **Application Designer**: Visual form designer with toolbar to add labels, text edits, and buttons to a design canvas
+- **PeopleCode Editor**: Code editor with Python syntax highlighting
+- **Data Mover**: Import/export data from CSV and JSON files, displayed in a table
+- **Query Tool**: Query builder with table selection, SQL generation, and mock execution with sample results
+- **Process Scheduler**: Add and manage scheduled tasks with manual execution
+
+## Features
+
 - Tabbed interface for different tools
-- Basic text editor for PeopleCode
-- Placeholder interfaces for other tools
+- Basic implementations of PeopleTools-inspired functionality
 - Windows-native desktop application using PyQt5
 
 ## Development
