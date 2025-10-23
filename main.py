@@ -70,11 +70,39 @@ class PythonHighlighter(QSyntaxHighlighter):
 
         # Keywords
         keywords = [
-            "and", "as", "assert", "break", "class", "continue", "def",
-            "del", "elif", "else", "except", "False", "finally", "for",
-            "from", "global", "if", "import", "in", "is", "lambda", "None",
-            "nonlocal", "not", "or", "pass", "raise", "return", "True",
-            "try", "while", "with", "yield"
+            "and",
+            "as",
+            "assert",
+            "break",
+            "class",
+            "continue",
+            "def",
+            "del",
+            "elif",
+            "else",
+            "except",
+            "False",
+            "finally",
+            "for",
+            "from",
+            "global",
+            "if",
+            "import",
+            "in",
+            "is",
+            "lambda",
+            "None",
+            "nonlocal",
+            "not",
+            "or",
+            "pass",
+            "raise",
+            "return",
+            "True",
+            "try",
+            "while",
+            "with",
+            "yield",
         ]
 
         self.highlighting_rules = []
@@ -122,6 +150,7 @@ class HBIDE(QMainWindow):
         self.create_process_scheduler_tab()
         self.create_file_explorer_tab()
         self.create_git_tab()
+        self.create_help_tab()
 
         self.show()
 
@@ -129,20 +158,20 @@ class HBIDE(QMainWindow):
         menubar = self.menuBar()
 
         # File menu
-        file_menu = menubar.addMenu('File')
-        exit_action = QAction('Exit', self)
+        file_menu = menubar.addMenu("File")
+        exit_action = QAction("Exit", self)
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
         # Edit menu
-        edit_menu = menubar.addMenu('Edit')
-        settings_action = QAction('Settings', self)
+        edit_menu = menubar.addMenu("Edit")
+        settings_action = QAction("Settings", self)
         settings_action.triggered.connect(self.show_settings)
         edit_menu.addAction(settings_action)
 
         # Help menu
-        help_menu = menubar.addMenu('Help')
-        about_action = QAction('About', self)
+        help_menu = menubar.addMenu("Help")
+        about_action = QAction("About", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
 
@@ -150,7 +179,11 @@ class HBIDE(QMainWindow):
         QMessageBox.information(self, "Settings", "Settings dialog not implemented yet")
 
     def show_about(self):
-        QMessageBox.about(self, "About HB Tools", "HB Tools - A PeopleTools 7 inspired IDE\nVersion 1.0\nBuilt with PyQt5")
+        QMessageBox.about(
+            self,
+            "About HB Tools",
+            "HB Tools - A PeopleTools 7 inspired IDE\nVersion 1.0\nBuilt with PyQt5",
+        )
 
     def create_application_designer_tab(self):
         tab = QWidget()
@@ -178,7 +211,9 @@ class HBIDE(QMainWindow):
         # Design area
         self.design_area = QWidget()
         self.design_layout = QVBoxLayout(self.design_area)
-        self.design_area.setStyleSheet("border: 1px solid black; background-color: white;")
+        self.design_area.setStyleSheet(
+            "border: 1px solid black; background-color: white;"
+        )
 
         scroll_area = QScrollArea()
         scroll_area.setWidget(self.design_area)
@@ -187,7 +222,9 @@ class HBIDE(QMainWindow):
 
         # Connect buttons
         add_label_btn.clicked.connect(lambda: self.add_component_to_design("label"))
-        add_text_edit_btn.clicked.connect(lambda: self.add_component_to_design("text_edit"))
+        add_text_edit_btn.clicked.connect(
+            lambda: self.add_component_to_design("text_edit")
+        )
         add_button_btn.clicked.connect(lambda: self.add_component_to_design("button"))
         clear_btn.clicked.connect(self.clear_design)
         save_design_btn.clicked.connect(self.save_design)
@@ -309,7 +346,9 @@ class HBIDE(QMainWindow):
         # Tasks table
         self.tasks_table = QTableWidget()
         self.tasks_table.setColumnCount(4)
-        self.tasks_table.setHorizontalHeaderLabels(["Name", "Command", "Schedule", "Actions"])
+        self.tasks_table.setHorizontalHeaderLabels(
+            ["Name", "Command", "Schedule", "Actions"]
+        )
         layout.addWidget(self.tasks_table)
 
         # Connect
@@ -317,7 +356,6 @@ class HBIDE(QMainWindow):
 
         tab.setLayout(layout)
         self.tabs.addTab(tab, "Process Scheduler")
-
 
     def create_file_explorer_tab(self):
         tab = QWidget()
@@ -370,14 +408,19 @@ class HBIDE(QMainWindow):
     def refresh_git_status(self):
         try:
             result = subprocess.run(
-                ["git", "status", "--porcelain"], capture_output=True, text=True, cwd="."
+                ["git", "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                cwd=".",
             )
             self.git_status.setPlainText(result.stdout or "No changes")
         except Exception as e:
             self.git_status.setPlainText(f"Error: {str(e)}")
 
     def git_commit(self):
-        message, ok = QInputDialog.getText(self, "Commit Message", "Enter commit message:")
+        message, ok = QInputDialog.getText(
+            self, "Commit Message", "Enter commit message:"
+        )
         if ok and message:
             try:
                 subprocess.run(["git", "add", "."], check=True)
@@ -397,6 +440,34 @@ class HBIDE(QMainWindow):
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Push failed: {str(e)}")
 
+    def create_help_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout()
+
+        help_text = QTextBrowser()
+        help_text.setHtml(
+            """
+        <h1>HB Tools Help</h1>
+        <h2>Application Designer</h2>
+        <p>Use the toolbar to add components to your form. Save and load designs as JSON files.</p>
+        <h2>PeopleCode Editor</h2>
+        <p>Write and edit code with syntax highlighting. Supports Python syntax.</p>
+        <h2>Data Mover</h2>
+        <p>Import/export data from CSV and JSON files. Data is displayed in a table for editing.</p>
+        <h2>Query Tool</h2>
+        <p>Build SQL queries with table selection and column specification. Execute mock queries.</p>
+        <h2>Process Scheduler</h2>
+        <p>Add tasks with commands and schedules. Run commands manually.</p>
+        <h2>File Explorer</h2>
+        <p>Browse your file system with a tree view.</p>
+        <h2>Git</h2>
+        <p>View git status, commit changes, and push to remote.</p>
+        """
+        )
+        layout.addWidget(help_text)
+
+        tab.setLayout(layout)
+        self.tabs.addTab(tab, "Help")
 
     def add_component_to_design(self, component_type, text=""):
         if component_type == "label":
@@ -418,7 +489,9 @@ class HBIDE(QMainWindow):
                 child.widget().deleteLater()
 
     def save_design(self):
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Design", "", "JSON Files (*.json)")
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Design", "", "JSON Files (*.json)"
+        )
         if file_path:
             try:
                 components = []
@@ -427,20 +500,24 @@ class HBIDE(QMainWindow):
                     if isinstance(widget, QLabel):
                         components.append({"type": "label", "text": widget.text()})
                     elif isinstance(widget, QTextEdit):
-                        components.append({"type": "text_edit", "text": widget.toPlainText()})
+                        components.append(
+                            {"type": "text_edit", "text": widget.toPlainText()}
+                        )
                     elif isinstance(widget, QPushButton):
                         components.append({"type": "button", "text": widget.text()})
-                with open(file_path, 'w') as file:
+                with open(file_path, "w") as file:
                     json.dump(components, file, indent=4)
                 QMessageBox.information(self, "Success", "Design saved successfully")
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to save design: {str(e)}")
 
     def load_design(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Load Design", "", "JSON Files (*.json)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Load Design", "", "JSON Files (*.json)"
+        )
         if file_path:
             try:
-                with open(file_path, 'r') as file:
+                with open(file_path, "r") as file:
                     components = json.load(file)
                 self.clear_design()
                 for comp in components:
@@ -450,10 +527,12 @@ class HBIDE(QMainWindow):
                 QMessageBox.warning(self, "Error", f"Failed to load design: {str(e)}")
 
     def load_csv(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Open CSV", "", "CSV Files (*.csv)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open CSV", "", "CSV Files (*.csv)"
+        )
         if file_path:
             try:
-                with open(file_path, 'r') as file:
+                with open(file_path, "r") as file:
                     reader = csv.reader(file)
                     data = list(reader)
                     if not data:
@@ -463,18 +542,24 @@ class HBIDE(QMainWindow):
                     col_count = len(data[0])
                     for i, row in enumerate(data[1:], 1):
                         if len(row) != col_count:
-                            QMessageBox.warning(self, "Error", f"Inconsistent columns at row {i+1}")
+                            QMessageBox.warning(
+                                self, "Error", f"Inconsistent columns at row {i+1}"
+                            )
                             return
                     self.populate_table(data)
-                    QMessageBox.information(self, "Success", f"Loaded {len(data)} rows from CSV")
+                    QMessageBox.information(
+                        self, "Success", f"Loaded {len(data)} rows from CSV"
+                    )
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to load CSV: {str(e)}")
 
     def load_json(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Open JSON", "", "JSON Files (*.json)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open JSON", "", "JSON Files (*.json)"
+        )
         if file_path:
             try:
-                with open(file_path, 'r') as file:
+                with open(file_path, "r") as file:
                     data = json.load(file)
                     if not isinstance(data, list):
                         QMessageBox.warning(self, "Error", "JSON root must be an array")
@@ -483,19 +568,25 @@ class HBIDE(QMainWindow):
                         QMessageBox.warning(self, "Error", "JSON array is empty")
                         return
                     if not all(isinstance(item, dict) for item in data):
-                        QMessageBox.warning(self, "Error", "All items in JSON array must be objects")
+                        QMessageBox.warning(
+                            self, "Error", "All items in JSON array must be objects"
+                        )
                         return
                     # Check consistent keys
                     keys = set(data[0].keys())
                     for i, item in enumerate(data[1:], 1):
                         if set(item.keys()) != keys:
-                            QMessageBox.warning(self, "Error", f"Inconsistent keys at item {i+1}")
+                            QMessageBox.warning(
+                                self, "Error", f"Inconsistent keys at item {i+1}"
+                            )
                             return
                     headers = list(keys)
                     rows = [list(item.values()) for item in data]
                     table_data = [headers] + rows
                     self.populate_table(table_data)
-                    QMessageBox.information(self, "Success", f"Loaded {len(data)} records from JSON")
+                    QMessageBox.information(
+                        self, "Success", f"Loaded {len(data)} records from JSON"
+                    )
             except json.JSONDecodeError as e:
                 QMessageBox.warning(self, "Error", f"Invalid JSON: {str(e)}")
             except Exception as e:
@@ -505,10 +596,12 @@ class HBIDE(QMainWindow):
         if self.data_table.rowCount() == 0:
             QMessageBox.warning(self, "Error", "No data to save")
             return
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save CSV", "", "CSV Files (*.csv)")
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save CSV", "", "CSV Files (*.csv)"
+        )
         if file_path:
             try:
-                with open(file_path, 'w', newline='') as file:
+                with open(file_path, "w", newline="") as file:
                     writer = csv.writer(file)
                     for row in range(self.data_table.rowCount()):
                         row_data = []
@@ -524,7 +617,9 @@ class HBIDE(QMainWindow):
         if self.data_table.rowCount() <= 1:  # No data rows
             QMessageBox.warning(self, "Error", "No data to save")
             return
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save JSON", "", "JSON Files (*.json)")
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save JSON", "", "JSON Files (*.json)"
+        )
         if file_path:
             try:
                 headers = []
@@ -540,7 +635,7 @@ class HBIDE(QMainWindow):
                         row_dict[headers[col]] = item.text() if item else ""
                     data.append(row_dict)
 
-                with open(file_path, 'w') as file:
+                with open(file_path, "w") as file:
                     json.dump(data, file, indent=4)
                 QMessageBox.information(self, "Success", "JSON saved successfully")
             except Exception as e:
@@ -557,7 +652,9 @@ class HBIDE(QMainWindow):
         # Set headers if first row
         if len(data) > 0:
             for col in range(len(data[0])):
-                self.data_table.setHorizontalHeaderItem(col, QTableWidgetItem(f"Col {col+1}"))
+                self.data_table.setHorizontalHeaderItem(
+                    col, QTableWidgetItem(f"Col {col+1}")
+                )
 
     def generate_sql(self):
         table = self.table_combo.currentText()
@@ -572,19 +669,19 @@ class HBIDE(QMainWindow):
             data = [
                 ["id", "name", "email"],
                 [1, "John Doe", "john@example.com"],
-                [2, "Jane Smith", "jane@example.com"]
+                [2, "Jane Smith", "jane@example.com"],
             ]
         elif table == "products":
             data = [
                 ["id", "name", "price"],
                 [1, "Widget", "10.99"],
-                [2, "Gadget", "25.50"]
+                [2, "Gadget", "25.50"],
             ]
         elif table == "orders":
             data = [
                 ["id", "user_id", "product_id", "quantity"],
                 [1, 1, 1, 2],
-                [2, 2, 2, 1]
+                [2, 2, 2, 1],
             ]
         else:
             data = [["No data"]]
@@ -601,7 +698,9 @@ class HBIDE(QMainWindow):
         # Set headers
         if len(data) > 0:
             for col in range(len(data[0])):
-                self.query_results.setHorizontalHeaderItem(col, QTableWidgetItem(data[0][col] if row == 0 else f"Col {col+1}"))
+                self.query_results.setHorizontalHeaderItem(
+                    col, QTableWidgetItem(data[0][col] if row == 0 else f"Col {col+1}")
+                )
 
     def add_task(self):
         name = self.task_name_edit.text().strip()
