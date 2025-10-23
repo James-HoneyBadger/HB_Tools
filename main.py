@@ -21,7 +21,14 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QInputDialog,
     QTextBrowser,
+    QTreeView,
+    QSplitter,
+    QMenuBar,
+    QMenu,
+    QAction,
 )
+from PyQt5.QtCore import QDir
+from PyQt5.QtGui import QFileSystemModel
 from PyQt5.QtGui import QSyntaxHighlighter, QTextCharFormat, QFont
 from PyQt5.QtCore import QRegExp, Qt, QThread, pyqtSignal
 
@@ -100,6 +107,9 @@ class HBIDE(QMainWindow):
         self.setWindowTitle("HB Tools - PeopleTools IDE Clone")
         self.setGeometry(100, 100, 1200, 800)
 
+        # Menu bar
+        self.create_menu_bar()
+
         # Create tab widget
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
@@ -110,8 +120,37 @@ class HBIDE(QMainWindow):
         self.create_data_mover_tab()
         self.create_query_tool_tab()
         self.create_process_scheduler_tab()
+        self.create_file_explorer_tab()
+        self.create_git_tab()
 
         self.show()
+
+    def create_menu_bar(self):
+        menubar = self.menuBar()
+
+        # File menu
+        file_menu = menubar.addMenu('File')
+        exit_action = QAction('Exit', self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+        # Edit menu
+        edit_menu = menubar.addMenu('Edit')
+        settings_action = QAction('Settings', self)
+        settings_action.triggered.connect(self.show_settings)
+        edit_menu.addAction(settings_action)
+
+        # Help menu
+        help_menu = menubar.addMenu('Help')
+        about_action = QAction('About', self)
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
+
+    def show_settings(self):
+        QMessageBox.information(self, "Settings", "Settings dialog not implemented yet")
+
+    def show_about(self):
+        QMessageBox.about(self, "About HB Tools", "HB Tools - A PeopleTools 7 inspired IDE\nVersion 1.0\nBuilt with PyQt5")
 
     def create_application_designer_tab(self):
         tab = QWidget()
@@ -278,6 +317,85 @@ class HBIDE(QMainWindow):
 
         tab.setLayout(layout)
         self.tabs.addTab(tab, "Process Scheduler")
+
+
+    def create_file_explorer_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout()
+
+        self.file_model = QFileSystemModel()
+        self.file_model.setRootPath(QDir.homePath())
+
+        self.file_tree = QTreeView()
+        self.file_tree.setModel(self.file_model)
+        self.file_tree.setRootIndex(self.file_model.index(QDir.homePath()))
+        self.file_tree.setColumnWidth(0, 250)
+
+        layout.addWidget(QLabel("File Explorer"))
+        layout.addWidget(self.file_tree)
+
+        tab.setLayout(layout)
+        self.tabs.addTab(tab, "File Explorer")
+
+    def create_git_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout()
+
+        # Git status display
+        self.git_status = QTextBrowser()
+        layout.addWidget(QLabel("Git Status"))
+        layout.addWidget(self.git_status)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        refresh_btn = QPushButton("Refresh Status")
+        commit_btn = QPushButton("Commit Changes")
+        push_btn = QPushButton("Push")
+
+        button_layout.addWidget(refresh_btn)
+        button_layout.addWidget(commit_btn)
+        button_layout.addWidget(push_btn)
+        button_layout.addStretch()
+
+        layout.addLayout(button_layout)
+
+        # Connect
+        refresh_btn.clicked.connect(self.refresh_git_status)
+        commit_btn.clicked.connect(self.git_commit)
+        push_btn.clicked.connect(self.git_push)
+
+        tab.setLayout(layout)
+        self.tabs.addTab(tab, "Git")
+
+    def refresh_git_status(self):
+        try:
+            result = subprocess.run(
+                ["git", "status", "--porcelain"], capture_output=True, text=True, cwd="."
+            )
+            self.git_status.setPlainText(result.stdout or "No changes")
+        except Exception as e:
+            self.git_status.setPlainText(f"Error: {str(e)}")
+
+    def git_commit(self):
+        message, ok = QInputDialog.getText(self, "Commit Message", "Enter commit message:")
+        if ok and message:
+            try:
+                subprocess.run(["git", "add", "."], check=True)
+                subprocess.run(["git", "commit", "-m", message], check=True)
+                self.refresh_git_status()
+                QMessageBox.information(self, "Success", "Committed successfully")
+            except subprocess.CalledProcessError as e:
+                QMessageBox.warning(self, "Error", f"Commit failed: {str(e)}")
+
+    def git_push(self):
+        try:
+            result = subprocess.run(["git", "push"], capture_output=True, text=True)
+            if result.returncode == 0:
+                QMessageBox.information(self, "Success", "Pushed successfully")
+            else:
+                QMessageBox.warning(self, "Error", f"Push failed: {result.stderr}")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Push failed: {str(e)}")
 
 
     def add_component_to_design(self, component_type, text=""):
