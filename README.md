@@ -16,6 +16,7 @@ HB Tools provides a desktop application with tools similar to Oracle's PeopleToo
 
 - Python 3.8 or higher
 - PyQt5 (installed via pip)
+- A graphical desktop environment (for GUI display)
 
 ## Installation
 
@@ -34,6 +35,8 @@ HB Tools provides a desktop application with tools similar to Oracle's PeopleToo
    ```bash
    python main.py
    ```
+
+   **Note**: If using a virtual environment, activate it first or use the full path to the Python executable (e.g., `./.venv/bin/python main.py`).
 
 ## Features
 
