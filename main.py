@@ -1,6 +1,7 @@
 import sys
 import csv
 import json
+import subprocess
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -19,9 +20,29 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QLineEdit,
     QInputDialog,
+    QTextBrowser,
 )
 from PyQt5.QtGui import QSyntaxHighlighter, QTextCharFormat, QFont
-from PyQt5.QtCore import QRegExp, Qt
+from PyQt5.QtCore import QRegExp, Qt, QThread, pyqtSignal
+
+
+class CommandWorker(QThread):
+    finished = pyqtSignal(str, str)  # stdout, stderr
+
+    def __init__(self, command):
+        super().__init__()
+        self.command = command
+
+    def run(self):
+        try:
+            result = subprocess.run(
+                self.command, shell=True, capture_output=True, text=True, timeout=30
+            )
+            self.finished.emit(result.stdout, result.stderr)
+        except subprocess.TimeoutExpired:
+            self.finished.emit("", "Command timed out")
+        except Exception as e:
+            self.finished.emit("", str(e))
 
 
 class PythonHighlighter(QSyntaxHighlighter):
@@ -102,11 +123,15 @@ class HBIDE(QMainWindow):
         add_text_edit_btn = QPushButton("Add Text Edit")
         add_button_btn = QPushButton("Add Button")
         clear_btn = QPushButton("Clear Design")
+        save_design_btn = QPushButton("Save Design")
+        load_design_btn = QPushButton("Load Design")
 
         toolbar.addWidget(add_label_btn)
         toolbar.addWidget(add_text_edit_btn)
         toolbar.addWidget(add_button_btn)
         toolbar.addWidget(clear_btn)
+        toolbar.addWidget(save_design_btn)
+        toolbar.addWidget(load_design_btn)
         toolbar.addStretch()
 
         layout.addLayout(toolbar)
@@ -126,6 +151,8 @@ class HBIDE(QMainWindow):
         add_text_edit_btn.clicked.connect(lambda: self.add_component_to_design("text_edit"))
         add_button_btn.clicked.connect(lambda: self.add_component_to_design("button"))
         clear_btn.clicked.connect(self.clear_design)
+        save_design_btn.clicked.connect(self.save_design)
+        load_design_btn.clicked.connect(self.load_design)
 
         tab.setLayout(layout)
         self.tabs.addTab(tab, "Application Designer")
@@ -253,14 +280,16 @@ class HBIDE(QMainWindow):
         self.tabs.addTab(tab, "Process Scheduler")
 
 
-    def add_component_to_design(self, component_type):
+    def add_component_to_design(self, component_type, text=""):
         if component_type == "label":
-            widget = QLabel("New Label")
+            widget = QLabel(text or "New Label")
         elif component_type == "text_edit":
             widget = QTextEdit()
             widget.setMaximumHeight(50)
+            if text:
+                widget.setPlainText(text)
         elif component_type == "button":
-            widget = QPushButton("New Button")
+            widget = QPushButton(text or "New Button")
         self.design_layout.addWidget(widget)
 
     def clear_design(self):
@@ -270,6 +299,38 @@ class HBIDE(QMainWindow):
             if child.widget():
                 child.widget().deleteLater()
 
+    def save_design(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Design", "", "JSON Files (*.json)")
+        if file_path:
+            try:
+                components = []
+                for i in range(self.design_layout.count()):
+                    widget = self.design_layout.itemAt(i).widget()
+                    if isinstance(widget, QLabel):
+                        components.append({"type": "label", "text": widget.text()})
+                    elif isinstance(widget, QTextEdit):
+                        components.append({"type": "text_edit", "text": widget.toPlainText()})
+                    elif isinstance(widget, QPushButton):
+                        components.append({"type": "button", "text": widget.text()})
+                with open(file_path, 'w') as file:
+                    json.dump(components, file, indent=4)
+                QMessageBox.information(self, "Success", "Design saved successfully")
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to save design: {str(e)}")
+
+    def load_design(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Load Design", "", "JSON Files (*.json)")
+        if file_path:
+            try:
+                with open(file_path, 'r') as file:
+                    components = json.load(file)
+                self.clear_design()
+                for comp in components:
+                    self.add_component_to_design(comp["type"], comp.get("text", ""))
+                QMessageBox.information(self, "Success", "Design loaded successfully")
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to load design: {str(e)}")
+
     def load_csv(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open CSV", "", "CSV Files (*.csv)")
         if file_path:
@@ -277,7 +338,17 @@ class HBIDE(QMainWindow):
                 with open(file_path, 'r') as file:
                     reader = csv.reader(file)
                     data = list(reader)
+                    if not data:
+                        QMessageBox.warning(self, "Error", "CSV file is empty")
+                        return
+                    # Validate consistent columns
+                    col_count = len(data[0])
+                    for i, row in enumerate(data[1:], 1):
+                        if len(row) != col_count:
+                            QMessageBox.warning(self, "Error", f"Inconsistent columns at row {i+1}")
+                            return
                     self.populate_table(data)
+                    QMessageBox.information(self, "Success", f"Loaded {len(data)} rows from CSV")
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to load CSV: {str(e)}")
 
@@ -287,18 +358,35 @@ class HBIDE(QMainWindow):
             try:
                 with open(file_path, 'r') as file:
                     data = json.load(file)
-                    if isinstance(data, list) and data:
-                        # Assume list of dicts
-                        headers = list(data[0].keys())
-                        rows = [list(row.values()) for row in data]
-                        table_data = [headers] + rows
-                        self.populate_table(table_data)
-                    else:
-                        QMessageBox.warning(self, "Error", "JSON must be a list of objects")
+                    if not isinstance(data, list):
+                        QMessageBox.warning(self, "Error", "JSON root must be an array")
+                        return
+                    if not data:
+                        QMessageBox.warning(self, "Error", "JSON array is empty")
+                        return
+                    if not all(isinstance(item, dict) for item in data):
+                        QMessageBox.warning(self, "Error", "All items in JSON array must be objects")
+                        return
+                    # Check consistent keys
+                    keys = set(data[0].keys())
+                    for i, item in enumerate(data[1:], 1):
+                        if set(item.keys()) != keys:
+                            QMessageBox.warning(self, "Error", f"Inconsistent keys at item {i+1}")
+                            return
+                    headers = list(keys)
+                    rows = [list(item.values()) for item in data]
+                    table_data = [headers] + rows
+                    self.populate_table(table_data)
+                    QMessageBox.information(self, "Success", f"Loaded {len(data)} records from JSON")
+            except json.JSONDecodeError as e:
+                QMessageBox.warning(self, "Error", f"Invalid JSON: {str(e)}")
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to load JSON: {str(e)}")
 
     def save_csv(self):
+        if self.data_table.rowCount() == 0:
+            QMessageBox.warning(self, "Error", "No data to save")
+            return
         file_path, _ = QFileDialog.getSaveFileName(self, "Save CSV", "", "CSV Files (*.csv)")
         if file_path:
             try:
@@ -315,6 +403,9 @@ class HBIDE(QMainWindow):
                 QMessageBox.warning(self, "Error", f"Failed to save CSV: {str(e)}")
 
     def save_json(self):
+        if self.data_table.rowCount() <= 1:  # No data rows
+            QMessageBox.warning(self, "Error", "No data to save")
+            return
         file_path, _ = QFileDialog.getSaveFileName(self, "Save JSON", "", "JSON Files (*.json)")
         if file_path:
             try:
@@ -418,9 +509,16 @@ class HBIDE(QMainWindow):
         self.task_command_edit.clear()
 
     def run_task(self, command):
-        # Mock run - show message
-        QMessageBox.information(self, "Task Run", f"Running command: {command}")
-        # In real, would execute the command, perhaps in a thread
+        # Run command in background thread
+        self.worker = CommandWorker(command)
+        self.worker.finished.connect(self.on_command_finished)
+        self.worker.start()
+
+    def on_command_finished(self, stdout, stderr):
+        if stderr:
+            QMessageBox.warning(self, "Command Error", f"Stderr: {stderr}")
+        else:
+            QMessageBox.information(self, "Command Success", f"Output: {stdout}")
 
 
 def main():
