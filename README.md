@@ -66,6 +66,31 @@ Ensure the Visual Studio environment is set up:
 cargo build
 ```
 
+## Troubleshooting
+
+### Linker Errors on Windows
+
+If you encounter `linker 'link.exe' not found` errors:
+
+1. Ensure Visual Studio Build Tools 2022 is installed with the "Desktop development with C++" workload
+2. For ARM64 Windows systems, the MSVC linker may not be available. Consider:
+   - Using Windows Subsystem for Linux (WSL) with GNU toolchain
+   - Cross-compiling from an x86_64 Windows machine
+   - Using an alternative Rust target if available
+
+### Environment Setup
+
+To verify the build environment:
+
+```powershell
+# Check Rust installation
+rustc --version
+cargo --version
+
+# Check if linker is available
+where link.exe
+```
+
 ## License
 
 [Add license information]
